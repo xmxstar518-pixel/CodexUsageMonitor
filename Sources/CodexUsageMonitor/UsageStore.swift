@@ -3,11 +3,11 @@ import Foundation
 
 @MainActor
 final class UsageStore: ObservableObject {
-    let language: AppLanguage
-    let l10n: L10n
+    @Published private(set) var language: AppLanguage
     @Published private(set) var snapshot: UsageSnapshot?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var isWindowPinned = true
     @Published var refreshInterval: TimeInterval = 60 {
         didSet { restartTimer() }
     }
@@ -16,13 +16,39 @@ final class UsageStore: ObservableObject {
     private var timer: Timer?
     private var hasStarted = false
     private let isDemoMode: Bool
+    private var lastMonitorError: UsageMonitorError?
+    private let defaults: UserDefaults
+    private static let languagePreferenceKey = "preferredAppLanguage"
+
+    var l10n: L10n { L10n(language: language) }
 
     init(
-        language: AppLanguage = .detect(),
-        arguments: [String] = ProcessInfo.processInfo.arguments
+        language: AppLanguage? = nil,
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        preferredLanguages: [String] = Locale.preferredLanguages,
+        defaults: UserDefaults = .standard
     ) {
-        self.language = language
-        self.l10n = L10n(language: language)
+        self.defaults = defaults
+        if let language {
+            self.language = language
+        } else if arguments.contains(where: { $0.hasPrefix("--language") })
+                    || environment["CODEX_USAGE_MONITOR_LANGUAGE"] != nil {
+            self.language = AppLanguage.detect(
+                arguments: arguments,
+                environment: environment,
+                preferredLanguages: preferredLanguages
+            )
+        } else if let saved = defaults.string(forKey: Self.languagePreferenceKey),
+                  let savedLanguage = AppLanguage(rawValue: saved) {
+            self.language = savedLanguage
+        } else {
+            self.language = AppLanguage.detect(
+                arguments: arguments,
+                environment: environment,
+                preferredLanguages: preferredLanguages
+            )
+        }
         self.isDemoMode = arguments.contains("--demo")
         if isDemoMode {
             self.snapshot = Self.demoSnapshot
@@ -32,6 +58,21 @@ final class UsageStore: ObservableObject {
     var menuTitle: String {
         guard let remaining = snapshot?.headlineRemainingPercent else { return "Codex" }
         return "\(Int(remaining.rounded()))%"
+    }
+
+    func setLanguage(_ language: AppLanguage) {
+        guard self.language != language else { return }
+        self.language = language
+        defaults.set(language.rawValue, forKey: Self.languagePreferenceKey)
+        if let lastMonitorError {
+            errorMessage = l10n.errorMessage(for: lastMonitorError)
+        }
+        FloatingPanelController.shared.updateTitle(l10n.title)
+    }
+
+    func toggleWindowPinned() {
+        isWindowPinned.toggle()
+        FloatingPanelController.shared.setPinned(isWindowPinned)
     }
 
     func start() {
@@ -49,9 +90,12 @@ final class UsageStore: ObservableObject {
         do {
             snapshot = try await client.fetchUsage()
             errorMessage = nil
+            lastMonitorError = nil
         } catch let error as UsageMonitorError {
+            lastMonitorError = error
             errorMessage = l10n.errorMessage(for: error)
         } catch {
+            lastMonitorError = nil
             errorMessage = error.localizedDescription
         }
     }

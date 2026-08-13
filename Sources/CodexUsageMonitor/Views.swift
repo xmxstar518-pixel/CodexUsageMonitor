@@ -3,6 +3,12 @@ import SwiftUI
 
 struct UsagePopoverView: View {
     @EnvironmentObject private var store: UsageStore
+    var presentation: Presentation = .menuBar
+
+    enum Presentation: Equatable {
+        case menuBar
+        case floatingPanel
+    }
 
     private var l10n: L10n { store.l10n }
 
@@ -49,8 +55,15 @@ struct UsagePopoverView: View {
             controls
         }
         .padding(14)
-        .frame(width: 400)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(
+            minWidth: presentation == .floatingPanel ? 360 : 400,
+            idealWidth: 400,
+            maxWidth: presentation == .floatingPanel ? .infinity : 400,
+            minHeight: presentation == .floatingPanel ? 320 : nil,
+            maxHeight: presentation == .floatingPanel ? .infinity : nil,
+            alignment: .topLeading
+        )
+        .fixedSize(horizontal: false, vertical: presentation == .menuBar)
     }
 
     private var header: some View {
@@ -83,11 +96,52 @@ struct UsagePopoverView: View {
     private var controls: some View {
         HStack(spacing: 8) {
             Button {
-                FloatingPanelController.shared.show(store: store)
+                if presentation == .menuBar {
+                    FloatingPanelController.shared.show(store: store)
+                } else {
+                    store.toggleWindowPinned()
+                }
             } label: {
-                Label(l10n.pinWindow, systemImage: "pin")
+                Label(
+                    presentation == .menuBar
+                        ? l10n.pinWindow
+                        : (store.isWindowPinned ? l10n.unpinWindow : l10n.pinWindow),
+                    systemImage: presentation == .menuBar
+                        ? "pin"
+                        : (store.isWindowPinned ? "pin.fill" : "pin.slash")
+                )
             }
+            .foregroundStyle(
+                presentation == .menuBar || store.isWindowPinned
+                    ? Color.accentColor
+                    : Color.secondary
+            )
             Spacer()
+            Menu {
+                Button {
+                    store.setLanguage(.simplifiedChinese)
+                } label: {
+                    if store.language == .simplifiedChinese {
+                        Label(l10n.simplifiedChinese, systemImage: "checkmark")
+                    } else {
+                        Text(l10n.simplifiedChinese)
+                    }
+                }
+                Button {
+                    store.setLanguage(.english)
+                } label: {
+                    if store.language == .english {
+                        Label(l10n.english, systemImage: "checkmark")
+                    } else {
+                        Text(l10n.english)
+                    }
+                }
+            } label: {
+                Image(systemName: "globe")
+            }
+            .menuStyle(.borderlessButton)
+            .help(l10n.languageMenu)
+            .fixedSize()
             Menu {
                 Button(l10n.quit) {
                     NSApplication.shared.terminate(nil)
@@ -208,6 +262,8 @@ struct UsageWindowView: View {
 final class FloatingPanelController: NSObject, NSWindowDelegate {
     static let shared = FloatingPanelController()
     private var panel: NSPanel?
+    private var isSnapping = false
+    private let snapDistance: CGFloat = 14
 
     func show(store: UsageStore) {
         if let panel {
@@ -216,17 +272,18 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
             return
         }
 
-        let rootView = UsagePopoverView().environmentObject(store)
+        let rootView = UsagePopoverView(presentation: .floatingPanel).environmentObject(store)
         let controller = NSHostingController(rootView: rootView)
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
-            styleMask: [.titled, .closable, .utilityWindow],
+            styleMask: [.titled, .closable, .resizable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
         panel.title = store.l10n.title
         panel.contentViewController = controller
-        panel.contentMinSize = NSSize(width: 400, height: 320)
+        panel.contentMinSize = NSSize(width: 360, height: 380)
+        panel.contentMaxSize = NSSize(width: 720, height: 900)
         panel.level = .floating
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
@@ -236,9 +293,50 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.panel = panel
+        setPinned(store.isWindowPinned)
     }
 
     func windowWillClose(_ notification: Notification) {
         panel = nil
+    }
+
+    func windowDidMove(_ notification: Notification) {
+        snapToVisibleScreenEdges()
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        snapToVisibleScreenEdges()
+    }
+
+    func updateTitle(_ title: String) {
+        panel?.title = title
+    }
+
+    func setPinned(_ isPinned: Bool) {
+        panel?.level = isPinned ? .floating : .normal
+    }
+
+    private func snapToVisibleScreenEdges() {
+        guard let panel, !isSnapping, let screen = panel.screen else { return }
+        let visible = screen.visibleFrame
+        let frame = panel.frame
+        var origin = frame.origin
+
+        if abs(frame.minX - visible.minX) <= snapDistance {
+            origin.x = visible.minX
+        } else if abs(frame.maxX - visible.maxX) <= snapDistance {
+            origin.x = visible.maxX - frame.width
+        }
+
+        if abs(frame.minY - visible.minY) <= snapDistance {
+            origin.y = visible.minY
+        } else if abs(frame.maxY - visible.maxY) <= snapDistance {
+            origin.y = visible.maxY - frame.height
+        }
+
+        guard origin != frame.origin else { return }
+        isSnapping = true
+        panel.setFrameOrigin(origin)
+        isSnapping = false
     }
 }

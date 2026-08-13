@@ -10,7 +10,8 @@ enum AppLanguage: String, CaseIterable, Sendable {
 
     static func detect(
         arguments: [String] = ProcessInfo.processInfo.arguments,
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        preferredLanguages: [String] = Locale.preferredLanguages
     ) -> AppLanguage {
         if let override = commandLineOverride(in: arguments)
             ?? environment["CODEX_USAGE_MONITOR_LANGUAGE"],
@@ -18,28 +19,7 @@ enum AppLanguage: String, CaseIterable, Sendable {
             return language
         }
 
-        for domain in ["com.openai.codex", "com.openai.chat"] {
-            if let preferred = UserDefaults(suiteName: domain)?.object(forKey: "AppleLanguages") {
-                if let values = preferred as? [String],
-                   let language = values.compactMap({ from(identifier: $0) }).first {
-                    return language
-                }
-                if let value = preferred as? String,
-                   let language = from(identifier: value) {
-                    return language
-                }
-            }
-        }
-
-        for path in ["/Applications/Codex.app", "/Applications/ChatGPT.app"] {
-            if let bundle = Bundle(path: path),
-               let identifier = bundle.preferredLocalizations.first,
-               let language = from(identifier: identifier) {
-                return language
-            }
-        }
-
-        return Locale.preferredLanguages.compactMap({ from(identifier: $0) }).first ?? .english
+        return preferredLanguages.compactMap({ from(identifier: $0) }).first ?? .english
     }
 
     static func from(identifier: String) -> AppLanguage? {
@@ -73,6 +53,10 @@ struct L10n: Sendable {
     var retryLater: String { pick("请稍后重试", "Please try again later") }
     var refreshNow: String { pick("立即刷新", "Refresh now") }
     var pinWindow: String { pick("固定浮窗", "Pin Window") }
+    var unpinWindow: String { pick("取消固定", "Unpin Window") }
+    var languageMenu: String { pick("语言", "Language") }
+    var simplifiedChinese: String { pick("简体中文", "Simplified Chinese") }
+    var english: String { pick("英文", "English") }
     var quit: String { pick("退出", "Quit") }
     var uninstall: String { pick("卸载应用…", "Uninstall App…") }
     var unknownPlan: String { pick("未知计划", "Unknown plan") }

@@ -14,6 +14,9 @@ A small native macOS menu bar app that reads your remaining Codex usage from the
 - Opens a floating window on launch and can keep it above other windows.
 - Automatically follows the Codex/ChatGPT app language when available, then falls back to the macOS preferred language.
 - Supports Simplified Chinese and English.
+- Detects the macOS preferred language on first launch, then remembers manual language changes.
+- Supports edge snapping, mouse resizing, and an adaptive floating-window layout.
+- Uses distinct highlighted/neutral pin icons for pinned and normal window states.
 - Includes Quit, in-app Uninstall, and a standalone uninstall script.
 - Does not read or store your ChatGPT token; it reuses the local Codex sign-in state.
 
@@ -39,13 +42,7 @@ The app is written to `dist/Codex 用量监控.app`.
 
 ## Language selection
 
-At launch, the app checks the following sources in order:
-
-1. A Codex/ChatGPT per-app language preference.
-2. The preferred localization of the installed Codex/ChatGPT app.
-3. The macOS preferred language.
-
-Chinese language variants use Simplified Chinese; all other languages use English. Maintainers can test either UI with `--language=zh-Hans` or `--language=en`.
+On first launch, the app reads the macOS preferred language. Chinese language variants use Simplified Chinese; all other languages use English. You can switch languages at any time from the globe menu, and the choice is remembered. Maintainers can test either UI with `--language=zh-Hans` or `--language=en`.
 
 ## Uninstall
 

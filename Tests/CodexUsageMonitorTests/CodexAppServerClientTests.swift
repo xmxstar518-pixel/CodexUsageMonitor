@@ -41,3 +41,35 @@ import Testing
     #expect(store.snapshot?.buckets.count == 2)
     #expect(store.snapshot?.headlineRemainingPercent == 66)
 }
+
+@MainActor
+@Test func firstLaunchUsesMacOSLanguageAndManualChoicePersists() {
+    let suiteName = "CodexUsageMonitorTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let firstLaunch = UsageStore(
+        arguments: ["app", "--demo"],
+        environment: [:],
+        preferredLanguages: ["zh-Hans-CN"],
+        defaults: defaults
+    )
+    #expect(firstLaunch.language == .simplifiedChinese)
+    firstLaunch.setLanguage(.english)
+
+    let nextLaunch = UsageStore(
+        arguments: ["app", "--demo"],
+        environment: [:],
+        preferredLanguages: ["zh-Hans-CN"],
+        defaults: defaults
+    )
+    #expect(nextLaunch.language == .english)
+}
+
+@MainActor
+@Test func pinStateToggles() {
+    let store = UsageStore(language: .english, arguments: ["app", "--demo"])
+    #expect(store.isWindowPinned)
+    store.toggleWindowPinned()
+    #expect(!store.isWindowPinned)
+}
