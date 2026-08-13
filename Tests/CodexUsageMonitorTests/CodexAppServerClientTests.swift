@@ -1,0 +1,35 @@
+import Foundation
+import Testing
+@testable import CodexUsageMonitor
+
+@Test func parsesMultipleRateLimitBuckets() throws {
+    let lines = [
+        #"{"id":0,"result":{"userAgent":"test"}}"#,
+        #"{"id":1,"result":{"account":{"type":"chatgpt","planType":"pro"},"requiresOpenaiAuth":true}}"#,
+        #"{"id":2,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1787011237}},"rateLimitsByLimitId":{"codex":{"limitId":"codex","limitName":null,"primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1787011237},"secondary":null,"planType":"pro"},"codex_other":{"limitId":"codex_other","limitName":"Spark","primary":{"usedPercent":42,"windowDurationMins":10080,"resetsAt":1787192948},"secondary":null}}}}"#
+    ].joined(separator: "\n")
+
+    let snapshot = try CodexAppServerClient.parse(Data(lines.utf8), fetchedAt: Date(timeIntervalSince1970: 0))
+
+    #expect(snapshot.planType == "pro")
+    #expect(snapshot.buckets.count == 2)
+    #expect(snapshot.buckets[0].id == "codex")
+    #expect(snapshot.buckets[0].windows[0].remainingPercent == 75)
+    #expect(snapshot.buckets[1].name == "Spark")
+    #expect(snapshot.buckets[1].windows[0].durationMinutes == 10_080)
+}
+
+@Test func parsesBackwardCompatibleSingleBucket() throws {
+    let line = #"{"id":2,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":80,"windowDurationMins":60,"resetsAt":1787011237},"secondary":null}}}"#
+    let snapshot = try CodexAppServerClient.parse(Data(line.utf8))
+    #expect(snapshot.buckets.count == 1)
+    #expect(snapshot.headlineRemainingPercent == 20)
+}
+
+@Test func detectsSupportedLanguages() {
+    #expect(AppLanguage.from(identifier: "zh-Hans-CN") == .simplifiedChinese)
+    #expect(AppLanguage.from(identifier: "zh_CN") == .simplifiedChinese)
+    #expect(AppLanguage.from(identifier: "en-US") == .english)
+    #expect(AppLanguage.from(identifier: "fr-FR") == nil)
+    #expect(AppLanguage.detect(arguments: ["app", "--language=en"], environment: [:]) == .english)
+}
