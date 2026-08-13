@@ -141,3 +141,24 @@ import Testing
     store.toggleWindowPinned()
     #expect(!store.isWindowPinned)
 }
+
+@MainActor
+@Test func floatingWindowOpacityPersistsAndClamps() {
+    let suiteName = "CodexUsageMonitorTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let firstLaunch = UsageStore(language: .english, arguments: ["app", "--demo"], defaults: defaults)
+    #expect(firstLaunch.windowOpacity == 1)
+
+    firstLaunch.setWindowOpacity(0.553)
+    #expect(firstLaunch.windowOpacity == 0.553)
+
+    let nextLaunch = UsageStore(language: .english, arguments: ["app", "--demo"], defaults: defaults)
+    #expect(nextLaunch.windowOpacity == 0.553)
+
+    nextLaunch.setWindowOpacity(0)
+    #expect(nextLaunch.windowOpacity == 0.2)
+    nextLaunch.setWindowOpacity(2)
+    #expect(nextLaunch.windowOpacity == 1)
+}

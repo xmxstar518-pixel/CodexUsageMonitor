@@ -75,7 +75,7 @@ struct UsagePopoverView: View {
             minWidth: presentation == .floatingPanel ? 360 : 400,
             idealWidth: 400,
             maxWidth: presentation == .floatingPanel ? .infinity : 400,
-            minHeight: 390,
+            minHeight: 430,
             maxHeight: presentation == .floatingPanel ? .infinity : nil,
             alignment: .topLeading
         )
@@ -111,44 +111,62 @@ struct UsagePopoverView: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 8) {
-            Button {
-                if presentation == .menuBar {
-                    FloatingPanelController.shared.show(store: store)
-                } else {
-                    store.toggleWindowPinned()
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Button {
+                    if presentation == .menuBar {
+                        FloatingPanelController.shared.show(store: store)
+                    } else {
+                        store.toggleWindowPinned()
+                    }
+                } label: {
+                    Label(
+                        presentation == .menuBar
+                            ? l10n.pinWindow
+                            : (store.isWindowPinned ? l10n.unpinWindow : l10n.pinWindow),
+                        systemImage: presentation == .menuBar
+                            ? "pin"
+                            : (store.isWindowPinned ? "pin.fill" : "pin.slash")
+                    )
                 }
-            } label: {
-                Label(
-                    presentation == .menuBar
-                        ? l10n.pinWindow
-                        : (store.isWindowPinned ? l10n.unpinWindow : l10n.pinWindow),
-                    systemImage: presentation == .menuBar
-                        ? "pin"
-                        : (store.isWindowPinned ? "pin.fill" : "pin.slash")
+                .foregroundStyle(
+                    presentation == .menuBar || store.isWindowPinned
+                        ? Color.accentColor
+                        : Color.secondary
                 )
-            }
-            .foregroundStyle(
-                presentation == .menuBar || store.isWindowPinned
-                    ? Color.accentColor
-                    : Color.secondary
-            )
-            Spacer()
-            Menu {
-                Button(l10n.quit) {
-                    NSApplication.shared.terminate(nil)
+                Spacer()
+                Menu {
+                    Button(l10n.quit) {
+                        NSApplication.shared.terminate(nil)
+                    }
+                    Divider()
+                    Button(l10n.uninstall, role: .destructive) {
+                        AppActions.confirmAndUninstall(language: store.language)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-                Divider()
-                Button(l10n.uninstall, role: .destructive) {
-                    AppActions.confirmAndUninstall(language: store.language)
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
+                .menuStyle(.borderlessButton)
+                .fixedSize()
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
+
+            HStack(spacing: 9) {
+                Label(l10n.windowOpacity, systemImage: "circle.lefthalf.filled")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                OpacityGradientSlider(
+                    value: store.windowOpacity,
+                    accessibilityLabel: l10n.windowOpacity,
+                    onChange: store.setWindowOpacity
+                )
+                Text("\(Int((store.windowOpacity * 100).rounded()))%")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 34, alignment: .trailing)
+            }
         }
-        .frame(minHeight: 28)
+        .frame(minHeight: 62)
         .padding(.bottom, 4)
     }
 
@@ -328,6 +346,64 @@ private struct UsageGradientProgressBar: View {
     }
 }
 
+private struct OpacityGradientSlider: View {
+    let value: Double
+    let accessibilityLabel: String
+    let onChange: (Double) -> Void
+
+    private let minimum = 0.2
+    private let thumbSize: CGFloat = 14
+
+    var body: some View {
+        GeometryReader { proxy in
+            let availableWidth = max(1, proxy.size.width - thumbSize)
+            let fraction = CGFloat((value - minimum) / (1 - minimum))
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.12), Color.accentColor],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 7)
+                    .padding(.horizontal, thumbSize / 2)
+
+                Circle()
+                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .frame(width: thumbSize, height: thumbSize)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .shadow(color: .black.opacity(0.18), radius: 1, y: 1)
+                    .offset(x: availableWidth * min(1, max(0, fraction)))
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        let position = min(availableWidth, max(0, gesture.location.x - thumbSize / 2))
+                        onChange(minimum + Double(position / availableWidth) * (1 - minimum))
+                    }
+            )
+        }
+        .frame(minWidth: 80, maxWidth: .infinity, minHeight: 18, maxHeight: 18)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue("\(Int((value * 100).rounded()))%")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment:
+                onChange(min(1, value + 0.05))
+            case .decrement:
+                onChange(max(minimum, value - 0.05))
+            @unknown default:
+                break
+            }
+        }
+    }
+}
+
 @MainActor
 final class FloatingPanelController: NSObject, NSWindowDelegate {
     static let shared = FloatingPanelController()
@@ -345,14 +421,14 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         let rootView = UsagePopoverView(presentation: .floatingPanel).environmentObject(store)
         let controller = NSHostingController(rootView: rootView)
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 480),
             styleMask: [.titled, .closable, .resizable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
         panel.title = store.l10n.title
         panel.contentViewController = controller
-        panel.contentMinSize = NSSize(width: 360, height: 420)
+        panel.contentMinSize = NSSize(width: 360, height: 460)
         panel.contentMaxSize = NSSize(width: 720, height: 900)
         panel.level = .floating
         panel.isFloatingPanel = true
@@ -364,6 +440,7 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.panel = panel
         setPinned(store.isWindowPinned)
+        setOpacity(store.windowOpacity)
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -384,6 +461,10 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
 
     func setPinned(_ isPinned: Bool) {
         panel?.level = isPinned ? .floating : .normal
+    }
+
+    func setOpacity(_ opacity: Double) {
+        panel?.alphaValue = CGFloat(opacity)
     }
 
     private func snapToVisibleScreenEdges() {

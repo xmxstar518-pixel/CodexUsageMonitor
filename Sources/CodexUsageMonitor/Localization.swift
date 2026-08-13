@@ -55,6 +55,7 @@ struct L10n: Sendable {
     var pinWindow: String { pick("固定浮窗", "Pin Window") }
     var unpinWindow: String { pick("取消固定", "Unpin Window") }
     var languageMenu: String { pick("语言", "Language") }
+    var windowOpacity: String { pick("浮窗透明度", "Window Opacity") }
     var simplifiedChinese: String { pick("简体中文", "Simplified Chinese") }
     var english: String { pick("英文", "English") }
     var quit: String { pick("退出", "Quit") }

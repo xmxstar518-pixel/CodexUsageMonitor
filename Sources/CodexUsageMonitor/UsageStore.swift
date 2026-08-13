@@ -8,6 +8,7 @@ final class UsageStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var isWindowPinned = true
+    @Published private(set) var windowOpacity: Double
     @Published var refreshInterval: TimeInterval = 60 {
         didSet { restartTimer() }
     }
@@ -19,6 +20,7 @@ final class UsageStore: ObservableObject {
     private var lastMonitorError: UsageMonitorError?
     private let defaults: UserDefaults
     private static let languagePreferenceKey = "preferredAppLanguage"
+    private static let windowOpacityKey = "floatingWindowOpacity"
 
     var l10n: L10n { L10n(language: language) }
 
@@ -30,6 +32,10 @@ final class UsageStore: ObservableObject {
         defaults: UserDefaults = .standard
     ) {
         self.defaults = defaults
+        let savedOpacity = defaults.object(forKey: Self.windowOpacityKey) == nil
+            ? nil
+            : defaults.double(forKey: Self.windowOpacityKey)
+        self.windowOpacity = Self.clampedOpacity(savedOpacity ?? 1)
         if let language {
             self.language = language
         } else if arguments.contains(where: { $0.hasPrefix("--language") })
@@ -75,6 +81,13 @@ final class UsageStore: ObservableObject {
         FloatingPanelController.shared.setPinned(isWindowPinned)
     }
 
+    func setWindowOpacity(_ opacity: Double) {
+        let clamped = Self.clampedOpacity(opacity)
+        windowOpacity = clamped
+        defaults.set(clamped, forKey: Self.windowOpacityKey)
+        FloatingPanelController.shared.setOpacity(clamped)
+    }
+
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
@@ -109,6 +122,10 @@ final class UsageStore: ObservableObject {
             }
         }
         timer?.tolerance = min(10, refreshInterval * 0.1)
+    }
+
+    private static func clampedOpacity(_ value: Double) -> Double {
+        min(1, max(0.2, value))
     }
 
     private static var demoSnapshot: UsageSnapshot {

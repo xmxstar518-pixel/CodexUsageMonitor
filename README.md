@@ -16,6 +16,7 @@ A small native macOS menu bar app that reads your remaining Codex usage from the
 - Supports Simplified Chinese and English.
 - Detects the macOS preferred language on first launch, then remembers manual language changes.
 - Supports edge snapping, mouse resizing, and an adaptive floating-window layout.
+- Adds a continuous 20–100% floating-window opacity control with a transparent-to-solid gradient track.
 - Uses distinct highlighted/neutral pin icons for pinned and normal window states.
 - Keeps menu bar popover controls fully visible with a compact header language selector.
 - Includes Quit, in-app Uninstall, and a standalone uninstall script.
