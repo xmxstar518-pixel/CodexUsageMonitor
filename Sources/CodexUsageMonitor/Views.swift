@@ -59,7 +59,7 @@ struct UsagePopoverView: View {
             minWidth: presentation == .floatingPanel ? 360 : 400,
             idealWidth: 400,
             maxWidth: presentation == .floatingPanel ? .infinity : 400,
-            minHeight: presentation == .floatingPanel ? 320 : nil,
+            minHeight: 390,
             maxHeight: presentation == .floatingPanel ? .infinity : nil,
             alignment: .topLeading
         )
@@ -82,6 +82,7 @@ struct UsagePopoverView: View {
                 ProgressView()
                     .controlSize(.small)
             }
+            languageMenu
             Button {
                 Task { await store.refresh() }
             } label: {
@@ -118,31 +119,6 @@ struct UsagePopoverView: View {
             )
             Spacer()
             Menu {
-                Button {
-                    store.setLanguage(.simplifiedChinese)
-                } label: {
-                    if store.language == .simplifiedChinese {
-                        Label(l10n.simplifiedChinese, systemImage: "checkmark")
-                    } else {
-                        Text(l10n.simplifiedChinese)
-                    }
-                }
-                Button {
-                    store.setLanguage(.english)
-                } label: {
-                    if store.language == .english {
-                        Label(l10n.english, systemImage: "checkmark")
-                    } else {
-                        Text(l10n.english)
-                    }
-                }
-            } label: {
-                Image(systemName: "globe")
-            }
-            .menuStyle(.borderlessButton)
-            .help(l10n.languageMenu)
-            .fixedSize()
-            Menu {
                 Button(l10n.quit) {
                     NSApplication.shared.terminate(nil)
                 }
@@ -156,6 +132,36 @@ struct UsagePopoverView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
         }
+        .frame(minHeight: 28)
+        .padding(.bottom, 4)
+    }
+
+    private var languageMenu: some View {
+        Menu {
+            Button {
+                store.setLanguage(.simplifiedChinese)
+            } label: {
+                if store.language == .simplifiedChinese {
+                    Label(l10n.simplifiedChinese, systemImage: "checkmark")
+                } else {
+                    Text(l10n.simplifiedChinese)
+                }
+            }
+            Button {
+                store.setLanguage(.english)
+            } label: {
+                if store.language == .english {
+                    Label(l10n.english, systemImage: "checkmark")
+                } else {
+                    Text(l10n.english)
+                }
+            }
+        } label: {
+            Image(systemName: "globe")
+        }
+        .menuStyle(.borderlessButton)
+        .help(l10n.languageMenu)
+        .fixedSize()
     }
 
     private func statusLine(_ snapshot: UsageSnapshot) -> String {
@@ -275,14 +281,14 @@ final class FloatingPanelController: NSObject, NSWindowDelegate {
         let rootView = UsagePopoverView(presentation: .floatingPanel).environmentObject(store)
         let controller = NSHostingController(rootView: rootView)
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 440),
             styleMask: [.titled, .closable, .resizable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
         panel.title = store.l10n.title
         panel.contentViewController = controller
-        panel.contentMinSize = NSSize(width: 360, height: 380)
+        panel.contentMinSize = NSSize(width: 360, height: 420)
         panel.contentMaxSize = NSSize(width: 720, height: 900)
         panel.level = .floating
         panel.isFloatingPanel = true
