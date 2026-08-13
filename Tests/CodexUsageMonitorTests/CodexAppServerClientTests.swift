@@ -33,3 +33,11 @@ import Testing
     #expect(AppLanguage.from(identifier: "fr-FR") == nil)
     #expect(AppLanguage.detect(arguments: ["app", "--language=en"], environment: [:]) == .english)
 }
+
+@MainActor
+@Test func demoModeUsesSanitizedSnapshot() {
+    let store = UsageStore(language: .english, arguments: ["app", "--demo"])
+    #expect(store.snapshot?.planType == "pro")
+    #expect(store.snapshot?.buckets.count == 2)
+    #expect(store.snapshot?.headlineRemainingPercent == 66)
+}

@@ -4,6 +4,8 @@
 
 一个原生 macOS 菜单栏小工具，通过本机 Codex App Server 读取 Codex 剩余用量。
 
+![Codex 用量监控中文界面，完整显示所有限额桶](docs/screenshot-zh-CN.png)
+
 ## 功能
 
 - 菜单栏显示主限额剩余百分比。

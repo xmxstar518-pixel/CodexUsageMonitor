@@ -4,6 +4,8 @@
 
 A small native macOS menu bar app that reads your remaining Codex usage from the local Codex App Server.
 
+![Codex Usage Monitor showing all usage buckets in English](docs/screenshot-en.png)
+
 ## Features
 
 - Shows the main remaining percentage in the menu bar.

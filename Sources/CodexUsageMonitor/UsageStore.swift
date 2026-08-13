@@ -15,10 +15,18 @@ final class UsageStore: ObservableObject {
     private let client = CodexAppServerClient()
     private var timer: Timer?
     private var hasStarted = false
+    private let isDemoMode: Bool
 
-    init(language: AppLanguage = .detect()) {
+    init(
+        language: AppLanguage = .detect(),
+        arguments: [String] = ProcessInfo.processInfo.arguments
+    ) {
         self.language = language
         self.l10n = L10n(language: language)
+        self.isDemoMode = arguments.contains("--demo")
+        if isDemoMode {
+            self.snapshot = Self.demoSnapshot
+        }
     }
 
     var menuTitle: String {
@@ -29,6 +37,7 @@ final class UsageStore: ObservableObject {
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
+        guard !isDemoMode else { return }
         restartTimer()
         Task { await refresh() }
     }
@@ -56,5 +65,42 @@ final class UsageStore: ObservableObject {
             }
         }
         timer?.tolerance = min(10, refreshInterval * 0.1)
+    }
+
+    private static var demoSnapshot: UsageSnapshot {
+        let reset = Date().addingTimeInterval(3 * 24 * 60 * 60)
+        return UsageSnapshot(
+            accountType: "chatgpt",
+            planType: "pro",
+            buckets: [
+                UsageBucket(
+                    id: "codex",
+                    name: "Codex",
+                    planType: "pro",
+                    windows: [UsageWindow(
+                        id: "codex-primary",
+                        label: "Primary window",
+                        usedPercent: 34,
+                        durationMinutes: 10_080,
+                        resetsAt: reset
+                    )],
+                    creditBalance: nil
+                ),
+                UsageBucket(
+                    id: "codex-spark",
+                    name: "GPT-5.3-Codex-Spark",
+                    planType: "pro",
+                    windows: [UsageWindow(
+                        id: "codex-spark-primary",
+                        label: "Primary window",
+                        usedPercent: 0,
+                        durationMinutes: 10_080,
+                        resetsAt: reset.addingTimeInterval(2 * 24 * 60 * 60)
+                    )],
+                    creditBalance: nil
+                )
+            ],
+            fetchedAt: Date()
+        )
     }
 }
