@@ -265,8 +265,11 @@ struct UsageWindowView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ProgressView(value: window.remainingPercent, total: 100)
-                .tint(progressColor)
+            UsageGradientProgressBar(
+                value: window.remainingPercent,
+                gradient: progressGradient,
+                accessibilityLabel: l10n.remaining
+            )
 
             HStack {
                 if let duration = window.durationMinutes {
@@ -282,14 +285,47 @@ struct UsageWindowView: View {
         }
     }
 
-    private var progressColor: Color {
-        switch window.remainingPercent {
-        case ..<15: return .red
-        case ..<35: return .orange
-        default: return .green
+    private var progressGradient: LinearGradient {
+        let colors: [Color]
+        switch window.level {
+        case .healthy:
+            colors = [.mint, .green]
+        case .moderate:
+            colors = [.green, .yellow]
+        case .low:
+            colors = [.yellow, .orange]
+        case .critical:
+            colors = [.orange, .red]
         }
+        return LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
     }
 
+}
+
+private struct UsageGradientProgressBar: View {
+    let value: Double
+    let gradient: LinearGradient
+    let accessibilityLabel: String
+
+    private var fraction: Double {
+        min(1, max(0, value / 100))
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.12))
+                Capsule()
+                    .fill(gradient)
+                    .frame(width: proxy.size.width * fraction)
+            }
+        }
+        .frame(height: 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue("\(value.formatted(.number.precision(.fractionLength(0...1))))%")
+    }
 }
 
 @MainActor

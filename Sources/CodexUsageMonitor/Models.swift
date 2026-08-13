@@ -1,5 +1,12 @@
 import Foundation
 
+enum UsageLevel: Equatable, Sendable {
+    case healthy
+    case moderate
+    case low
+    case critical
+}
+
 struct UsageWindow: Identifiable, Equatable, Sendable {
     let id: String
     let label: String
@@ -9,6 +16,15 @@ struct UsageWindow: Identifiable, Equatable, Sendable {
 
     var remainingPercent: Double {
         min(100, max(0, 100 - usedPercent))
+    }
+
+    var level: UsageLevel {
+        switch remainingPercent {
+        case ..<15: return .critical
+        case ..<35: return .low
+        case ..<65: return .moderate
+        default: return .healthy
+        }
     }
 }
 

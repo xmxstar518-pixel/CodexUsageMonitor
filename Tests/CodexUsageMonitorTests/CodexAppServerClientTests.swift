@@ -81,6 +81,27 @@ import Testing
     #expect(AppLanguage.detect(arguments: ["app", "--language=en"], environment: [:]) == .english)
 }
 
+@Test func mapsRemainingUsageToGradientLevels() {
+    func window(remaining: Double) -> UsageWindow {
+        UsageWindow(
+            id: "test-\(remaining)",
+            label: "Test",
+            usedPercent: 100 - remaining,
+            durationMinutes: nil,
+            resetsAt: nil
+        )
+    }
+
+    #expect(window(remaining: 100).level == .healthy)
+    #expect(window(remaining: 65).level == .healthy)
+    #expect(window(remaining: 64.9).level == .moderate)
+    #expect(window(remaining: 35).level == .moderate)
+    #expect(window(remaining: 34.9).level == .low)
+    #expect(window(remaining: 15).level == .low)
+    #expect(window(remaining: 14.9).level == .critical)
+    #expect(window(remaining: 0).level == .critical)
+}
+
 @MainActor
 @Test func demoModeUsesSanitizedSnapshot() {
     let store = UsageStore(language: .english, arguments: ["app", "--demo"])

@@ -21,6 +21,7 @@ A small native macOS menu bar app that reads your remaining Codex usage from the
 - Includes Quit, in-app Uninstall, and a standalone uninstall script.
 - Does not read or store your ChatGPT token; it reuses the local Codex sign-in state.
 - Handles empty quota responses, reached-limit states, and workspace credit balances without assuming plan-specific allowance values.
+- Uses dynamic progress gradients that shift from mint/green to yellow/orange and finally red as remaining usage is depleted.
 
 ## Requirements
 
