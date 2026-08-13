@@ -20,12 +20,15 @@ A small native macOS menu bar app that reads your remaining Codex usage from the
 - Keeps menu bar popover controls fully visible with a compact header language selector.
 - Includes Quit, in-app Uninstall, and a standalone uninstall script.
 - Does not read or store your ChatGPT token; it reuses the local Codex sign-in state.
+- Handles empty quota responses, reached-limit states, and workspace credit balances without assuming plan-specific allowance values.
 
 ## Requirements
 
 - macOS 13 or later.
 - The ChatGPT or Codex desktop app installed and signed in.
 - Apple Silicon for the prebuilt release. The source can be compiled for other architectures supported by Swift.
+
+Free, Go, Plus, Pro, Business, Edu, and Enterprise plan payloads are covered by parser fixtures. Pro is additionally verified with a live account. See the [compatibility matrix](docs/COMPATIBILITY.md).
 
 ## Install
 

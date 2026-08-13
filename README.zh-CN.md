@@ -20,12 +20,15 @@
 - 语言切换位于紧凑标题栏，菜单栏弹层底部按钮保持完整可见。
 - 支持退出、应用内卸载和独立卸载脚本。
 - 不读取或保存 ChatGPT Token，复用本机 Codex 登录状态。
+- 兼容空限额、已达到上限和工作区 Credits，不猜测不同计划的额度数值。
 
 ## 系统要求
 
 - macOS 13 或更高版本。
 - 已安装并登录 ChatGPT 或 Codex 桌面客户端。
 - 预编译版本面向 Apple Silicon；源码可为 Swift 支持的其他架构自行编译。
+
+Free、Go、Plus、Pro、Business、Edu 和 Enterprise 均已覆盖解析测试，其中 Pro 另有真实账户验证。详见[兼容性矩阵](docs/COMPATIBILITY.md)。
 
 ## 安装
 

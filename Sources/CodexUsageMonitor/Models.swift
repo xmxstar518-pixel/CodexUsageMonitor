@@ -18,6 +18,7 @@ struct UsageBucket: Identifiable, Equatable, Sendable {
     let planType: String?
     let windows: [UsageWindow]
     let creditBalance: Double?
+    let rateLimitReachedType: String?
 }
 
 struct UsageSnapshot: Equatable, Sendable {

@@ -162,7 +162,7 @@ struct CodexAppServerClient: Sendable {
         }
 
         var rawBuckets: [(String, [String: Any])] = []
-        if let byID = limitsResult["rateLimitsByLimitId"] as? [String: Any] {
+        if let byID = limitsResult["rateLimitsByLimitId"] as? [String: Any], !byID.isEmpty {
             rawBuckets = byID.compactMap { key, value in
                 guard let value = value as? [String: Any] else { return nil }
                 return (key, value)
@@ -172,6 +172,7 @@ struct CodexAppServerClient: Sendable {
         }
 
         let accountPlan = account?["planType"] as? String
+        let rootCreditBalance = creditBalance(from: limitsResult["credits"] as? [String: Any])
         let buckets = rawBuckets.map { key, raw -> UsageBucket in
             var windows: [UsageWindow] = []
             if let primary = raw["primary"] as? [String: Any],
@@ -183,26 +184,21 @@ struct CodexAppServerClient: Sendable {
                 windows.append(makeWindow(id: "\(key)-secondary", label: "次要窗口", raw: secondary, used: used))
             }
 
-            let credits = raw["credits"] as? [String: Any]
-            let creditBalance = doubleValue(credits?["balance"])
-                ?? doubleValue(credits?["remaining"])
-                ?? doubleValue(credits?["available"])
+            let creditBalance = creditBalance(from: raw["credits"] as? [String: Any])
+                ?? (key == "codex" ? rootCreditBalance : nil)
 
             return UsageBucket(
                 id: (raw["limitId"] as? String) ?? key,
                 name: (raw["limitName"] as? String) ?? (key == "codex" ? "Codex" : key),
                 planType: (raw["planType"] as? String) ?? accountPlan,
                 windows: windows,
-                creditBalance: creditBalance
+                creditBalance: creditBalance,
+                rateLimitReachedType: raw["rateLimitReachedType"] as? String
             )
         }.sorted { lhs, rhs in
             if lhs.id == "codex" { return true }
             if rhs.id == "codex" { return false }
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
-        }
-
-        guard !buckets.isEmpty else {
-            throw UsageMonitorError.malformedResponse
         }
 
         return UsageSnapshot(
@@ -211,6 +207,12 @@ struct CodexAppServerClient: Sendable {
             buckets: buckets,
             fetchedAt: fetchedAt
         )
+    }
+
+    private static func creditBalance(from credits: [String: Any]?) -> Double? {
+        doubleValue(credits?["balance"])
+            ?? doubleValue(credits?["remaining"])
+            ?? doubleValue(credits?["available"])
     }
 
     private static func makeWindow(id: String, label: String, raw: [String: Any], used: Double) -> UsageWindow {

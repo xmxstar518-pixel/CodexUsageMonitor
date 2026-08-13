@@ -26,6 +26,53 @@ import Testing
     #expect(snapshot.headlineRemainingPercent == 20)
 }
 
+@Test func fallsBackToSingleBucketWhenMultiBucketMapIsEmpty() throws {
+    let line = #"{"id":2,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":30,"windowDurationMins":60,"resetsAt":1787011237}},"rateLimitsByLimitId":{}}}"#
+    let snapshot = try CodexAppServerClient.parse(Data(line.utf8))
+    #expect(snapshot.buckets.count == 1)
+    #expect(snapshot.headlineRemainingPercent == 70)
+}
+
+@Test func parsesAllCurrentChatGPTPlanLabels() throws {
+    let plans = ["free", "go", "plus", "pro", "business", "edu", "enterprise"]
+
+    for plan in plans {
+        let lines = [
+            #"{"id":1,"result":{"account":{"type":"chatgpt","planType":"\#(plan)"},"requiresOpenaiAuth":true}}"#,
+            #"{"id":2,"result":{"rateLimitsByLimitId":{"codex":{"limitId":"codex","primary":{"usedPercent":10,"windowDurationMins":300,"resetsAt":1787011237},"secondary":null}}}}"#
+        ].joined(separator: "\n")
+
+        let snapshot = try CodexAppServerClient.parse(Data(lines.utf8))
+        #expect(snapshot.planType == plan)
+        #expect(snapshot.buckets.first?.planType == plan)
+        #expect(snapshot.headlineRemainingPercent == 90)
+    }
+}
+
+@Test func preservesFreeAccountWhenNoQuotaWindowIsReturned() throws {
+    let lines = [
+        #"{"id":1,"result":{"account":{"type":"chatgpt","planType":"free"},"requiresOpenaiAuth":true}}"#,
+        #"{"id":2,"result":{"rateLimits":null,"rateLimitsByLimitId":{}}}"#
+    ].joined(separator: "\n")
+
+    let snapshot = try CodexAppServerClient.parse(Data(lines.utf8))
+    #expect(snapshot.planType == "free")
+    #expect(snapshot.buckets.isEmpty)
+    #expect(snapshot.headlineRemainingPercent == nil)
+}
+
+@Test func parsesWorkspaceCreditsAndReachedLimitState() throws {
+    let lines = [
+        #"{"id":1,"result":{"account":{"type":"chatgpt","planType":"business"},"requiresOpenaiAuth":true}}"#,
+        #"{"id":2,"result":{"credits":{"remaining":12.5},"rateLimitsByLimitId":{"codex":{"limitId":"codex","primary":{"usedPercent":100,"windowDurationMins":300,"resetsAt":1787011237},"secondary":null,"rateLimitReachedType":"primary"}}}}"#
+    ].joined(separator: "\n")
+
+    let snapshot = try CodexAppServerClient.parse(Data(lines.utf8))
+    #expect(snapshot.buckets.first?.creditBalance == 12.5)
+    #expect(snapshot.buckets.first?.rateLimitReachedType == "primary")
+    #expect(snapshot.headlineRemainingPercent == 0)
+}
+
 @Test func detectsSupportedLanguages() {
     #expect(AppLanguage.from(identifier: "zh-Hans-CN") == .simplifiedChinese)
     #expect(AppLanguage.from(identifier: "zh_CN") == .simplifiedChinese)

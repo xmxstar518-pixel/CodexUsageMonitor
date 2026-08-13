@@ -60,6 +60,13 @@ struct L10n: Sendable {
     var quit: String { pick("退出", "Quit") }
     var uninstall: String { pick("卸载应用…", "Uninstall App…") }
     var unknownPlan: String { pick("未知计划", "Unknown plan") }
+    var noUsageWindow: String { pick("暂无可展示的限额窗口", "No usage window available") }
+    var noUsageWindowExplanation: String {
+        pick("Codex 没有为此账户返回活动限额窗口。可用性可能取决于计划、地区或工作区设置。",
+             "Codex did not return an active quota window for this account. Availability can depend on the plan, region, or workspace settings.")
+    }
+    var bucketWithoutWindow: String { pick("此项目暂无活动限额窗口", "No active quota window for this item") }
+    var usageLimitReached: String { pick("已达到用量上限", "Usage limit reached") }
     var updatedAt: String { pick("更新于", "Updated") }
     var remaining: String { pick("剩余", "Remaining") }
     var used: String { pick("已用", "Used") }

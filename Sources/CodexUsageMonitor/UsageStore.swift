@@ -128,7 +128,8 @@ final class UsageStore: ObservableObject {
                         durationMinutes: 10_080,
                         resetsAt: reset
                     )],
-                    creditBalance: nil
+                    creditBalance: nil,
+                    rateLimitReachedType: nil
                 ),
                 UsageBucket(
                     id: "codex-spark",
@@ -141,7 +142,8 @@ final class UsageStore: ObservableObject {
                         durationMinutes: 10_080,
                         resetsAt: reset.addingTimeInterval(2 * 24 * 60 * 60)
                     )],
-                    creditBalance: nil
+                    creditBalance: nil,
+                    rateLimitReachedType: nil
                 )
             ],
             fetchedAt: Date()

@@ -17,9 +17,25 @@ struct UsagePopoverView: View {
             header
 
             if let snapshot = store.snapshot {
-                VStack(spacing: 8) {
-                    ForEach(snapshot.buckets) { bucket in
-                        UsageBucketView(bucket: bucket)
+                if snapshot.buckets.isEmpty {
+                    VStack(spacing: 9) {
+                        Image(systemName: "gauge.with.dots.needle.0percent")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.secondary)
+                        Text(l10n.noUsageWindow)
+                            .font(.headline)
+                        Text(l10n.noUsageWindowExplanation)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 145)
+                    .padding(.horizontal, 16)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(snapshot.buckets) { bucket in
+                            UsageBucketView(bucket: bucket)
+                        }
                     }
                 }
             } else if store.isLoading {
@@ -196,6 +212,18 @@ struct UsageBucketView: View {
 
             ForEach(bucket.windows) { window in
                 UsageWindowView(window: window, showLabel: bucket.windows.count > 1)
+            }
+
+            if bucket.windows.isEmpty {
+                Label(l10n.bucketWithoutWindow, systemImage: "clock.badge.questionmark")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if bucket.rateLimitReachedType != nil {
+                Label(l10n.usageLimitReached, systemImage: "exclamationmark.octagon.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red)
             }
 
             if let credits = bucket.creditBalance {
